@@ -12,6 +12,7 @@ import {
   LabIcon,
   settingsIcon
 } from '@jupyterlab/ui-components';
+import { reduce } from '@lumino/algorithm';
 import { Message } from '@lumino/messaging';
 import { ISignal, Signal } from '@lumino/signaling';
 import React from 'react';
@@ -75,6 +76,16 @@ export class PluginList extends ReactWidget {
         this._filter?.(plugin)
       );
     });
+    
+    const loadSettings = async () => {
+      for (const plugin of this._allPlugins) {
+        const pluginSettings = await this.registry.load(
+          plugin.id
+        ) as Settings;
+        this._settings[plugin.id] = pluginSettings;
+      }
+    }
+    void loadSettings();
 
     this._errors = {};
     this.selection = this._allPlugins[0].id;
@@ -124,6 +135,10 @@ export class PluginList extends ReactWidget {
   }
   set filter(filter: (item: ISettingRegistry.IPlugin) => boolean) {
     this._filter = filter;
+  }
+
+  get updateFilterSignal(): ISignal<this, Settings[]> {
+    return this._updateFilterSignal;
   }
 
   protected async updateModifiedPlugins(): Promise<void> {
@@ -238,9 +253,26 @@ export class PluginList extends ReactWidget {
   }
 
   setFilter(filter: (item: string) => boolean): void {
-    this._filter = (value: ISettingRegistry.IPlugin) => {
-      return filter(value.schema.title?.toLowerCase() ?? '');
+    this._filter = (plugin: ISettingRegistry.IPlugin) => {
+      let filterStr = plugin.schema.title?.toLowerCase() ?? '';
+      filterStr += reduce(
+        Object.keys(plugin.schema.properties ?? {}),
+        (acc: string, value: any) => {
+          const subProps = plugin.schema.properties?.[value].properties;
+          if (subProps) {
+            return `${acc} ${value} ${
+              reduce(
+                Object.keys(subProps),
+                (subAcc, subVal) => { return `${subAcc} ${subVal}` }
+              )
+            }`
+          }
+          return `${acc} ${value}`;
+        }
+      );
+      return filter(filterStr);
     };
+    this._updateFilterSignal.emit(this._allPlugins.filter(this._filter).map(plugin => { return this._settings[plugin.id]; }));
     this.update();
   }
 
@@ -311,7 +343,7 @@ export class PluginList extends ReactWidget {
       <div className="jp-PluginList-wrapper">
         <FilterBox
           updateFilter={this.setFilter}
-          useFuzzyFilter={true}
+          useFuzzyFilter={false}
           placeholder={trans.__('Search…')}
           forceRefresh={false}
         />
@@ -321,8 +353,12 @@ export class PluginList extends ReactWidget {
             <ul>{modifiedItems}</ul>
           </div>
         )}
-        <h1 className="jp-PluginList-header">{trans.__('Settings')}</h1>
-        <ul>{otherItems}</ul>
+        {otherItems.length > 0 && (
+          <div>
+            <h1 className="jp-PluginList-header">{trans.__('Settings')}</h1>
+            <ul>{otherItems}</ul>
+          </div>
+        )}
       </div>
     );
   }
@@ -332,8 +368,10 @@ export class PluginList extends ReactWidget {
   private _errors: { [id: string]: boolean };
   private _filter: (item: ISettingRegistry.IPlugin) => boolean;
   private _handleSelectSignal = new Signal<this, string>(this);
+  private _updateFilterSignal = new Signal<this, Settings[]>(this);
   private _modifiedPlugins: ISettingRegistry.IPlugin[] = [];
   private _allPlugins: ISettingRegistry.IPlugin[] = [];
+  private _settings: {[id: string]: Settings} = {};
   private _confirm?: (id: string) => Promise<void>;
   private _scrollTop: number | undefined = 0;
   private _selection = '';

@@ -50,6 +50,8 @@ export interface ISettingsPanelProps {
    * Sends the updated dirty state to the parent class.
    */
   updateDirtyState: (dirty: boolean) => void;
+
+  updateFilterSignal: ISignal<PluginList, Settings[]>;
 }
 
 /**
@@ -63,9 +65,11 @@ export const SettingsPanel: React.FC<ISettingsPanelProps> = ({
   handleSelectSignal,
   hasError,
   updateDirtyState,
+  updateFilterSignal,
   translator
 }: ISettingsPanelProps): JSX.Element => {
   const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null);
+  const [shownPlugins, setShownPlugins] = useState<Settings[]>(settings);
 
   // Refs used to keep track of "selected" plugin based on scroll location
   const editorRefs: {
@@ -78,6 +82,10 @@ export const SettingsPanel: React.FC<ISettingsPanelProps> = ({
   const editorDirtyStates: React.RefObject<{
     [id: string]: boolean;
   }> = React.useRef({});
+
+  updateFilterSignal.connect((list: PluginList, val: Settings[]) => {
+    setShownPlugins(val);
+  })
 
   useEffect(() => {
     const onSelectChange = (list: PluginList, pluginId: string) => {
@@ -107,7 +115,7 @@ export const SettingsPanel: React.FC<ISettingsPanelProps> = ({
 
   return (
     <div className="jp-SettingsPanel" ref={wrapperRef}>
-      {settings.map(pluginSettings => {
+      {shownPlugins.map(pluginSettings => {
         return (
           <div
             ref={editorRefs[pluginSettings.id]}

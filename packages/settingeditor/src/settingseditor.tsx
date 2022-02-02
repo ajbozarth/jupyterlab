@@ -33,6 +33,7 @@ export class SettingsEditor extends SplitPanel {
     this.addWidget(list);
     this.setDirtyState = this.setDirtyState.bind(this);
 
+
     /**
      * Initializes the settings panel after loading the schema for all plugins.
      */
@@ -61,6 +62,7 @@ export class SettingsEditor extends SplitPanel {
             handleSelectSignal={this._list.handleSelectSignal}
             onSelect={(id: string) => (this._list.selection = id)}
             hasError={this._list.setError}
+            updateFilterSignal={this._list.updateFilterSignal}
             updateDirtyState={this.setDirtyState}
             translator={this.translator}
           />

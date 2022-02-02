@@ -228,6 +228,16 @@ ul.jp-PluginList li.jp-mod-selected span.jp-PluginList-icon.jp-FileIcon {
 
 .jp-SettingsPanel .checkbox label {
   cursor: pointer;
+  font-size: var(--jp-content-font-size2);
+}
+
+.jp-SettingsPanel .checkbox p {
+  font-size: var(--jp-content-font-size1);
+}
+
+.jp-SettingsPanel .checkbox {
+  display: flex;
+  flex-direction: column-reverse;
 }
 
 .jp-SettingsPanel button[type='submit'] {
